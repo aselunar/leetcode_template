@@ -1,4 +1,14 @@
 // Banking System — all 4 levels in one file
+//
+// READING THIS FILE: This is the final, all-levels-done implementation.
+// On the actual OA you build incrementally:
+//   L1 — write deposit/withdraw/transfer with NO _processDue call (it doesn't exist yet)
+//   L2 — add topSpenders/getPaymentHistory (still no _processDue)
+//   L3 — add _processDue + scheduled/pending state, then ADD the _processDue(timestamp)
+//        call as the very first line of every existing L1/L2 method
+//        (it's a no-op while this.scheduled is empty, so L1/L2 behavior is unchanged)
+//   L4 — add merge/statistics/cashback on top
+//
 // Key insight: Map for O(1) account lookup; history array stores strings chronologically.
 
 class BankingSystem {
@@ -96,9 +106,12 @@ class BankingSystem {
   }
 
   // === LEVEL 3: Refactoring & Time-based Operations ===
-  // TRANSITION L2→L3: add this.pending, this.scheduled, this.paymentSeq
-  // Call _processDue(timestamp) at the START of every public method
-  // withdraw/transfer now return payment_id for amount > 1000
+  // TRANSITION L2→L3:
+  //   1. Add this.pending, this.scheduled, this.paymentSeq to constructor
+  //   2. Implement _processDue below
+  //   3. Add this._processDue(timestamp) as the FIRST LINE of every L1/L2 method
+  //      (safe to add retroactively — no-op when this.scheduled is empty)
+  //   4. Add the amount > 1000 guard to withdraw/transfer
 
   _processDue(timestamp) {
     // Execute scheduled payments in chronological order before current op
