@@ -34,12 +34,16 @@ class BankingSystem {
 
   // === LEVEL 1: Initial Design & Basic Functions ===
 
+  // TRANSITION L1→L2: extend account object with history: [] and outgoing: 0
+  // TRANSITION L2→L3: extend account object with activityCount: 0
   createAccount(timestamp, accountId) {
     if (this.accounts.has(accountId)) return 'false';
     this.accounts.set(accountId, { balance: 0, history: [], outgoing: 0, activityCount: 0 });
     return 'true';
   }
 
+  // TRANSITION L1→L2: add acc.history.push(...) for GET_PAYMENT_HISTORY
+  // TRANSITION L2→L3: add this._processDue(timestamp) and acc.activityCount++ for TOP_ACTIVITY
   deposit(timestamp, accountId, amount) {
     this._processDue(timestamp);
     const acc = this.accounts.get(accountId);

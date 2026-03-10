@@ -1,17 +1,37 @@
 // File Storage System — all 4 levels in one file
+//
+// READING THIS FILE: This is the final, all-levels-done implementation.
+// On the actual OA you build incrementally:
+//   L1 — write fileUpload/fileGet/fileCopy with no _logEvent call
+//   L2 — add fileSearch (still no TTL, no _logEvent)
+//   L3 — add _isAlive; add _AT variants of every operation (fileUploadAt, fileGetAt,
+//        fileCopyAt, fileSearchAt) — existing L1/L2 methods do NOT change at this phase
+//   L4 — add _logEvent + this.events to constructor, then add _logEvent calls to
+//        every write method (fileUpload and fileCopy from L1; _AT methods from L3);
+//        implement rollback()
+//
+// YES — the incremental approach works for CodeSignal:
+//   • Each method is only as complex as the current phase requires.
+//   • You never write (or call) anything until the phase that needs it.
+//   • "TRANSITION" comments on each method show exactly what lines to add at each phase.
+//   • CodeSignal re-runs all prior-level tests at each new level, so additive changes
+//     to existing methods (tracked by TRANSITION comments) keep everything passing.
+//
 // Key: Map for O(1) file lookup. For ROLLBACK, maintain event log with timestamps.
 
 class FileStorage {
   constructor() {
-    // fileName -> { size: number, uploadedAt: number, expiresAt: number|null }
+    // LEVEL 1: fileName -> { size: number, uploadedAt: number, expiresAt: number|null }
     this.files = new Map();
     // LEVEL 4: ordered event log for ROLLBACK
+    // TRANSITION L3→L4: add this.events = []
     // { ts: number, name: string, size: number, expiresAt: number|null }
     this.events = [];
   }
 
   // === LEVEL 1: Initial Design & Basic Functions ===
 
+  // TRANSITION L3→L4: add this._logEvent(0, fileName, +size, null) call
   fileUpload(fileName, size) {
     if (this.files.has(fileName)) throw new Error('File already exists');
     const entry = { size: +size, uploadedAt: 0, expiresAt: null };
@@ -26,6 +46,7 @@ class FileStorage {
     return String(f.size);
   }
 
+  // TRANSITION L3→L4: add this._logEvent(0, dest, src.size, src.expiresAt) call
   fileCopy(source, dest) {
     const src = this.files.get(source);
     if (!src) throw new Error('Source file not found');
@@ -48,7 +69,7 @@ class FileStorage {
   }
 
   // === LEVEL 3: Refactoring & Encapsulation ===
-  // TRANSITION L2→L3: refactor all checks to use _isAlive(name, timestamp)
+  // TRANSITION L2→L3: add _isAlive helper; add fileUploadAt/fileGetAt/fileCopyAt/fileSearchAt
   // For COPY, the copy inherits the source's expiresAt (same expiration time)
   // TTL in seconds: expiresAt = uploadedAt + ttl; alive when timestamp < expiresAt
 
@@ -56,10 +77,6 @@ class FileStorage {
     const f = this.files.get(name);
     if (!f) return false;
     return f.expiresAt === null || timestamp < f.expiresAt;
-  }
-
-  _logEvent(ts, name, size, expiresAt) {
-    this.events.push({ ts, name, size, expiresAt });
   }
 
   fileUploadAt(timestamp, fileName, size, ttl = null) {
@@ -97,10 +114,19 @@ class FileStorage {
   }
 
   // === LEVEL 4: Extending Design & Functionality ===
+  // TRANSITION L3→L4:
+  //   1. Add this.events = [] to constructor
+  //   2. Implement _logEvent below
+  //   3. Add _logEvent calls to ALL write methods:
+  //        L1: fileUpload (use ts=0) and fileCopy (use ts=0)
+  //        L3: fileUploadAt, fileCopyAt (use real timestamp)
   // ROLLBACK: restore state at target timestamp from event log
-  // TTL recalc: remaining = expiresAt - timestamp; new_expiresAt = timestamp + remaining = expiresAt (unchanged)
+  // TTL recalc: remaining = expiresAt - timestamp; new_expiresAt = expiresAt (unchanged)
   // Effectively: restore files alive at timestamp, keeping their original expiresAt values
-  // TRANSITION L3→L4: _logEvent() must be called on every write in L3 methods above
+
+  _logEvent(ts, name, size, expiresAt) {
+    this.events.push({ ts, name, size, expiresAt });
+  }
 
   rollback(timestamp) {
     // Build a map: most recent event at or before timestamp for each file

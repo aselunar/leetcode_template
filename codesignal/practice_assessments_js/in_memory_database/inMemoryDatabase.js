@@ -1,12 +1,32 @@
 // In-Memory Database — all 4 levels in one file
+//
+// READING THIS FILE: This is the final, all-levels-done implementation.
+// On the actual OA you build incrementally:
+//   L1 — write setField/getField/deleteField/get
+//   L2 — add delete/scan/scanByField/topNKeys (no TTL, no structural changes to L1)
+//   L3 — add _alive helper; add setFieldAt/setFieldWithTTL and _AT variants of
+//        read/delete/scan — L1/L2 "timeless" methods do NOT change at this phase
+//   L4 — add backup/restore/compare/getBackupInfo
+//
+// YES — the incremental approach works for CodeSignal:
+//   • Each method is only as complex as the current phase requires.
+//   • You never write (or call) anything until the phase that needs it.
+//   • "TRANSITION" comments on each method show exactly what lines to add at each phase.
+//   • CodeSignal re-runs all prior-level tests at each new level, so additive changes
+//     to existing methods (tracked by TRANSITION comments) keep everything passing.
+//
 // Key: nested Map<key, Map<field, {value, expiresAt}>>
 // TTL: field valid at timestamp T if T < expiresAt (unavailable at exactly T+ttl)
 
 class InMemoryDatabase {
   constructor() {
-    // key -> Map<field, { value: string, expiresAt: number|null }>
+    // LEVEL 1: key -> Map<field, { value: string, expiresAt: number|null }>
+    // Forward-compatible design: storing { value, expiresAt } from L1 means no
+    // structural refactor is needed when L3 adds TTL support (expiresAt stays null
+    // for non-TTL fields and is set to a timestamp for TTL fields).
     this.db = new Map();
     // LEVEL 4: backupId -> { timestamp, snapshot: Map<key, Map<field, {value, expiresAt}>> }
+    // TRANSITION L3→L4: add this.backups and this.backupSeq
     this.backups = new Map();
     this.backupSeq = 0;
   }
