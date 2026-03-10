@@ -1,0 +1,13 @@
+{
+  "name": "codesignal-practice-assessments",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "jest",
+    "test:bank": "jest banking_system",
+    "test:file": "jest file_storage",
+    "test:db": "jest in_memory_database"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
