@@ -9,12 +9,22 @@
 //        (it's a no-op while this.scheduled is empty, so L1/L2 behavior is unchanged)
 //   L4 — add merge/statistics/cashback on top
 //
+// YES — the incremental approach works for CodeSignal:
+//   • Each method is only as complex as the current phase requires.
+//   • You never write (or call) anything until the phase that needs it.
+//   • "TRANSITION" comments on each method show exactly what lines to add at each phase.
+//   • CodeSignal re-runs all prior-level tests at each new level, so additive changes
+//     to existing methods (tracked by TRANSITION comments) keep everything passing.
+//
 // Key insight: Map for O(1) account lookup; history array stores strings chronologically.
 
 class BankingSystem {
   constructor() {
-    // account_id -> { balance, history: string[], outgoing: number, activityCount: number }
-    this.accounts = new Map();
+    // LEVEL 1: account_id -> { balance }
+    // TRANSITION L1→L2: extend account object with history: [] and outgoing: 0
+    // TRANSITION L2→L3: extend account object with activityCount: 0;
+    //                   add this.pending, this.scheduled, this.paymentSeq
+    this.accounts = new Map();  // account_id -> { balance, history, outgoing, activityCount }
     // LEVEL 3: reference_id -> { accountId, amount, type: 'WITHDRAW'|'TRANSFER', targetId }
     this.pending = new Map();
     // LEVEL 3: { executeAt, accountId, amount, type: 'DEPOSIT'|'WITHDRAW' }
