@@ -3,3 +3,6 @@
 cses/output/*
 
 !cses/output/.gitkeep
+
+# JS dependencies
+codesignal/practice_assessments_js/node_modules/
