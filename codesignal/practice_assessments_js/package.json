@@ -1,0 +1,26 @@
+{
+  "name": "codesignal-practice-assessments",
+  "version": "1.0.0",
+  "description": "JavaScript solutions and Jest tests for Meta-style CodeSignal progressive OA problems",
+  "scripts": {
+    "test": "jest",
+    "test:bank": "jest banking_system",
+    "test:file": "jest file_storage",
+    "test:db": "jest in_memory_database",
+    "test:bank:1": "jest bankingSystem.level1",
+    "test:bank:2": "jest bankingSystem.level2",
+    "test:bank:3": "jest bankingSystem.level3",
+    "test:bank:4": "jest bankingSystem.level4",
+    "test:file:1": "jest fileStorage.level1",
+    "test:file:2": "jest fileStorage.level2",
+    "test:file:3": "jest fileStorage.level3",
+    "test:file:4": "jest fileStorage.level4",
+    "test:db:1": "jest inMemoryDatabase.level1",
+    "test:db:2": "jest inMemoryDatabase.level2",
+    "test:db:3": "jest inMemoryDatabase.level3",
+    "test:db:4": "jest inMemoryDatabase.level4"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0"
+  }
+}
