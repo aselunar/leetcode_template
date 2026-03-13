@@ -78,6 +78,7 @@ class FileStorage {
   // TTL is in seconds. expiresAt = uploadTimestamp + ttl
 
   fileUploadAt(timestamp, fileName, size, ttl = null) {
+    this._recordHistory(timestamp);
     // Alive file cannot be overwritten (treat same as L1)
     const existing = this.files.get(fileName);
     if (existing && this._isAlive(existing, timestamp)) {
@@ -94,6 +95,7 @@ class FileStorage {
   }
 
   fileCopyAt(timestamp, source, dest) {
+    this._recordHistory(timestamp);
     const src = this.files.get(source);
     if (!src || !this._isAlive(src, timestamp)) throw new Error(`Source not found: ${source}`);
     // Copy keeps the original TTL relative to its upload time — or copy with no TTL?
@@ -159,7 +161,8 @@ class FileStorage {
     }
   }
 
-  // Helper: call before mutating ops if you want ROLLBACK support
+  // Records a snapshot of current state before a mutating operation.
+  // Called automatically at the start of fileUploadAt and fileCopyAt.
   _recordHistory(timestamp) {
     this._snapshot(timestamp);
   }
