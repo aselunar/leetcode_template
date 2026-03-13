@@ -97,11 +97,8 @@ class FileStorage {
     const src = this.files.get(source);
     if (!src || !this._isAlive(src, timestamp)) throw new Error(`Source not found: ${source}`);
     // Copy keeps the original TTL relative to its upload time — or copy with no TTL?
-    // Spec says "copy"; safest interpretation: new file has no TTL (permanent copy)
-    const existing = this.files.get(dest);
-    if (existing && this._isAlive(existing, timestamp)) {
-      // Overwrite
-    }
+    // Spec says "copy"; safest interpretation: new file has no TTL (permanent copy).
+    // Overwrites dest unconditionally (alive or expired) — same behaviour as fileCopy.
     this.files.set(dest, { size: src.size, expiresAt: null, uploadedAt: timestamp, ttl: null });
   }
 
