@@ -229,11 +229,14 @@ class BankingSystem {
     acct1.spent += acct2.spent;
     acct1.txCount += acct2.txCount;
 
-    // Transfer any scheduled payments referencing acct2 → acct1
+    // Transfer any scheduled payments referencing acct2 → acct1.
+    // NOTE: destructuring (e.g. `for (const {accountId} of …)`) would NOT work here
+    // because it creates a local copy; we must mutate the property on the object itself.
     for (const sp of this.scheduledPayments) {
       if (sp.accountId === id2) sp.accountId = id1;
     }
-    // Transfer any pending payments referencing acct2 → acct1
+    // Transfer any pending payments referencing acct2 → acct1.
+    // Same reason: direct property assignment on the object, not a destructured copy.
     for (const [, p] of this.pendingPayments) {
       if (p.accountId === id2) p.accountId = id1;
       if (p.srcId === id2) p.srcId = id1;
