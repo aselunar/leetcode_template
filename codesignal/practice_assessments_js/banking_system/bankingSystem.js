@@ -32,6 +32,29 @@ class BankingSystem {
     return this.accounts.get(id) || null;
   }
 
+  // Core withdrawal mutation — no guards, no txCount, no _processScheduled.
+  _executeWithdraw(accountId, amount) {
+    const acct = this._getAccount(accountId);
+    if (!acct || acct.balance < amount) return '';
+    acct.balance -= amount;
+    acct.spent += amount;
+    acct.history.push({ type: 'WITHDRAW', amount });
+    return String(acct.balance);
+  }
+
+  // Core transfer mutation — no guards, no txCount, no _processScheduled.
+  _executeTransfer(srcId, tgtId, amount) {
+    const src = this._getAccount(srcId);
+    const tgt = this._getAccount(tgtId);
+    if (!src || !tgt || src.balance < amount) return '';
+    src.balance -= amount;
+    src.spent += amount;
+    tgt.balance += amount;
+    src.history.push({ type: 'TRANSFER_OUT', amount });
+    tgt.history.push({ type: 'TRANSFER_IN', amount });
+    return String(src.balance);
+  }
+
   // Call at the START of every public op to flush due scheduled payments.
   // KEY: process in chronological order; only those with executeAt <= current ts.
   _processScheduled(timestamp) {
@@ -48,10 +71,7 @@ class BankingSystem {
         acct.history.push({ type: 'DEPOSIT', amount: p.amount });
         acct.txCount++;
       } else if (p.type === 'WITHDRAW') {
-        if (acct.balance >= p.amount) {
-          acct.balance -= p.amount;
-          acct.spent += p.amount;
-          acct.history.push({ type: 'WITHDRAW', amount: p.amount });
+        if (this._executeWithdraw(p.accountId, p.amount) !== '') {
           acct.txCount++;
         }
       }
@@ -98,11 +118,9 @@ class BankingSystem {
       return paymentId;
     }
 
-    acct.balance -= amount;
-    acct.spent += amount;
-    acct.history.push({ type: 'WITHDRAW', amount });
-    acct.txCount++;
-    return String(acct.balance);
+    const result = this._executeWithdraw(accountId, amount);
+    if (result !== '') acct.txCount++;
+    return result;
   }
 
   transfer(timestamp, srcId, tgtId, amount) {
@@ -122,14 +140,12 @@ class BankingSystem {
       return paymentId;
     }
 
-    src.balance -= amount;
-    src.spent += amount;
-    tgt.balance += amount;
-    src.history.push({ type: 'TRANSFER_OUT', amount });
-    tgt.history.push({ type: 'TRANSFER_IN', amount });
-    src.txCount++;
-    tgt.txCount++;
-    return String(src.balance);
+    const result = this._executeTransfer(srcId, tgtId, amount);
+    if (result !== '') {
+      src.txCount++;
+      tgt.txCount++;
+    }
+    return result;
   }
 
   // ─── Level 2: TOP_SPENDERS, GET_PAYMENT_HISTORY ───────────────────────────
@@ -177,24 +193,11 @@ class BankingSystem {
     this.pendingPayments.delete(paymentId);
 
     if (pending.type === 'WITHDRAW') {
-      const acct = this._getAccount(pending.accountId);
-      if (!acct || acct.balance < pending.amount) return '';
-      acct.balance -= pending.amount;
-      acct.spent += pending.amount;
-      acct.history.push({ type: 'WITHDRAW', amount: pending.amount });
-      return String(acct.balance);
+      return this._executeWithdraw(pending.accountId, pending.amount);
     }
 
     if (pending.type === 'TRANSFER') {
-      const src = this._getAccount(pending.srcId);
-      const tgt = this._getAccount(pending.tgtId);
-      if (!src || !tgt || src.balance < pending.amount) return '';
-      src.balance -= pending.amount;
-      src.spent += pending.amount;
-      tgt.balance += pending.amount;
-      src.history.push({ type: 'TRANSFER_OUT', amount: pending.amount });
-      tgt.history.push({ type: 'TRANSFER_IN', amount: pending.amount });
-      return String(src.balance);
+      return this._executeTransfer(pending.srcId, pending.tgtId, pending.amount);
     }
 
     return '';
@@ -226,11 +229,14 @@ class BankingSystem {
     acct1.spent += acct2.spent;
     acct1.txCount += acct2.txCount;
 
-    // Transfer any scheduled payments referencing acct2 → acct1
+    // Transfer any scheduled payments referencing acct2 → acct1.
+    // NOTE: destructuring (e.g. `for (const {accountId} of …)`) would NOT work here
+    // because it creates a local copy; we must mutate the property on the object itself.
     for (const sp of this.scheduledPayments) {
       if (sp.accountId === id2) sp.accountId = id1;
     }
-    // Transfer any pending payments referencing acct2 → acct1
+    // Transfer any pending payments referencing acct2 → acct1.
+    // Same reason: direct property assignment on the object, not a destructured copy.
     for (const [, p] of this.pendingPayments) {
       if (p.accountId === id2) p.accountId = id1;
       if (p.srcId === id2) p.srcId = id1;
